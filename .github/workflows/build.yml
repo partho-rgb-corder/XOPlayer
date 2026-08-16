@@ -1,4 +1,3 @@
-
 name: Build Android APK
 
 on:
@@ -24,18 +23,27 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Gradle & Permissions
-      run: |
-        find . -name "gradlew" -exec chmod +x {} \;
+    - name: Setup Gradle Environment
+      uses: gradle/actions/setup-gradle@v3
 
     - name: Build Debug APK
       run: |
-        if [ -f "./gradlew" ]; then
+        GRADLEW_PATH=$(find . -name "gradlew" | head -n 1)
+        if [ -n "$GRADLEW_PATH" ]; then
+          echo "Found gradlew at $GRADLEW_PATH"
+          cd $(dirname "$GRADLEW_PATH")
+          chmod +x gradlew
           ./gradlew assembleDebug
         else
-          BUILD_DIR=$(dirname $(find . -name "gradlew" | head -n 1))
-          cd "$BUILD_DIR"
-          ./gradlew assembleDebug
+          echo "gradlew not found, finding build.gradle..."
+          BG_PATH=$(find . -name "build.gradle" -o -name "build.gradle.kts" | head -n 1)
+          if [ -n "$BG_PATH" ]; then
+            cd $(dirname "$BG_PATH")
+            gradle assembleDebug
+          else
+            echo "No build.gradle found in project!"
+            exit 1
+          fi
         fi
 
     - name: Upload APK Artifact
